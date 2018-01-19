@@ -67,7 +67,7 @@ osThreadId defaultTaskHandle;
 /* Private variables ---------------------------------------------------------*/
 cmd_line_desc_ptr_t command_line;
 
-#define CMD_LINE_TX_BUF_LEN (8)
+#define CMD_LINE_TX_BUF_LEN (512)
 #define CMD_LINE_RX_BUF_LEN (8)
 #define CMD_LINE_LINE_BUF_LEN (32)
 #define CMD_LINE_MAX_ARGS_CNT (8)
@@ -76,6 +76,8 @@ cmd_line_desc_ptr_t command_line;
 #define CMD_LINE_ECHO_ENABLED (1)
 #define CMD_LINE_ECHO_DISABLED (0)
 
+#define USART2_RX_BUF_LEN (1)
+char usart2_rx_buf[USART2_RX_BUF_LEN];
 char cmd_line_tx_buf[CMD_LINE_TX_BUF_LEN];
 char cmd_line_rx_buf[CMD_LINE_RX_BUF_LEN];
 char cmd_line_line_buf[CMD_LINE_LINE_BUF_LEN];
@@ -344,22 +346,25 @@ int uart_rx_tc(cmd_line_desc_ptr_t cmd_line_desc, char* str, int len, int timeou
   return CMD_LINE_SUCCESS;
 }
 
+void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart) {
+  int i;
+  for (i = 0; i < huart->RxXferSize; i++) {
+      cmd_line_uart_rx_cb(command_line, usart2_rx_buf[i]);
+  }
+}
+
 /* USER CODE END 4 */
 
 /* StartDefaultTask function */
 void StartDefaultTask(void const * argument)
 {
-
+  char c;
   /* USER CODE BEGIN 5 */
   cmd_line_printf(command_line, "%s", cmd_line_get_prompt(command_line));
   /* Infinite loop */
   for(;;)
   {
-    HAL_GPIO_WritePin(LD2_GPIO_Port, LD2_Pin, GPIO_PIN_SET);
-    osDelay(1000);
-    HAL_GPIO_WritePin(LD2_GPIO_Port, LD2_Pin, GPIO_PIN_RESET);
-    osDelay(1000);
-
+    HAL_UART_Receive_IT(&huart2, usart2_rx_buf, 1);
     if (cmd_line_process(command_line) == CMD_LINE_SUCCESS) {
         cmd_line_printf(command_line, "%s", cmd_line_get_prompt(command_line));
     }
