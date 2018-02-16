@@ -53,7 +53,7 @@
 /* USER CODE BEGIN Includes */
 #include "string.h"
 #include "cmdline.h"
-#include "cmd.h"
+#include "nucleo_cmd_list.h"
 
 /* USER CODE END Includes */
 
@@ -125,7 +125,7 @@ int main(void)
       .io_timeout_ms = CMD_LINE_IO_TIMEOUT_MS,
       .args_starts = cmd_line_args_starts,
       .echo_enabled = CMD_LINE_ECHO_ENABLED,
-      .cmd_root_lis = basic_cmd_list,
+      .cmd_root_lis = nucleo_cmd_list,
   };
 
   /* USER CODE END 1 */
@@ -358,15 +358,28 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart) {
 /* StartDefaultTask function */
 void StartDefaultTask(void const * argument)
 {
-  char c;
   /* USER CODE BEGIN 5 */
-  cmd_line_printf(command_line, "%s", cmd_line_get_prompt(command_line));
+  cmd_line_printf_tk(command_line, "%s", cmd_line_get_prompt(command_line));
   /* Infinite loop */
   for(;;)
   {
-    HAL_UART_Receive_IT(&huart2, usart2_rx_buf, 1);
-    if (cmd_line_process(command_line) == CMD_LINE_SUCCESS) {
-        cmd_line_printf(command_line, "%s", cmd_line_get_prompt(command_line));
+    HAL_UART_Receive_IT(&huart2, (uint8_t*)usart2_rx_buf, 1);
+    int retVal = cmd_line_process(command_line);
+    switch (retVal) {
+      case CMD_LINE_SUCCESS:
+        cmd_line_printf_tk(command_line, "%s", cmd_line_get_prompt(command_line));
+        break;
+      case CMD_LINE_ERR_CMD_NOT_FOUND:
+        cmd_line_printf_tk(command_line, "Command not found.\r\n");
+        cmd_line_printf_tk(command_line, "%s", cmd_line_get_prompt(command_line));
+        break;
+      case CMD_LINE_NO_CMD:
+        /* No action. */
+        break;
+      default:
+        cmd_line_printf_tk(command_line, "Interpreter error: 0x%X\r\n", retVal);
+        cmd_line_printf_tk(command_line, "%s", cmd_line_get_prompt(command_line));
+        break;
     }
   }
   /* USER CODE END 5 */ 
